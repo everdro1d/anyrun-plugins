@@ -62,7 +62,7 @@ dependencies = [
 [[package]]
 name = "anyrun-macros"
 version = "25.12.0"
-source = "git+https://github.com/anyrun-org/anyrun#cacdf2e00cf95211bd2c7971c4037b21870bc2c9"
+source = "git+https://github.com/anyrun-org/anyrun?tag=v25.12.0#cacdf2e00cf95211bd2c7971c4037b21870bc2c9"
 dependencies = [
  "quote",
  "syn 2.0.111",
@@ -71,7 +71,7 @@ dependencies = [
 [[package]]
 name = "anyrun-plugin"
 version = "25.12.0"
-source = "git+https://github.com/anyrun-org/anyrun#cacdf2e00cf95211bd2c7971c4037b21870bc2c9"
+source = "git+https://github.com/anyrun-org/anyrun?tag=v25.12.0#cacdf2e00cf95211bd2c7971c4037b21870bc2c9"
 dependencies = [
  "abi_stable",
  "anyrun-interface",
