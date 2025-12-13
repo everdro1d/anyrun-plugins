@@ -93,7 +93,7 @@ fn init(config_dir: RString) -> State {
 fn info() -> PluginInfo {
     PluginInfo {
         name: "Bookmarks Launcher".into(),
-        icon: "user-bookmarks".into(),
+        icon: "application-x-executable".into(),
     }
 }
 
@@ -124,7 +124,7 @@ fn get_matches(input:  RString, state: &State) -> RVec<Match> {
             title: b. name.clone().into(),
             description: ROption::RSome(format!("[{}] {}", b.tag, b.url).into()),
             use_pango: false,
-            icon: ROption::RSome("user-bookmarks".into()),
+            icon: ROption::RNone,
             id: ROption::RNone,
         })
         .collect::<Vec<_>>()
