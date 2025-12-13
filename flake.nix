@@ -72,12 +72,12 @@
           # Example:  expose each plugin as a package
           # Uncomment and modify based on your plugins
           #
-          # my-plugin = pkgs.callPackage ./plugin.nix {
+          # my-plugin = pkgs.callPackage ./plugins.nix {
           #   inherit inputs lockFile;
           #   name = "my-plugin";
           # };
 
-          bookmarks-launcher = pkgs.callPackage ./plugin.nix {
+          bookmarks-launcher = pkgs.callPackage ./plugins.nix {
             inherit inputs lockFile;
             name = "bookmarks-launcher";
           };
