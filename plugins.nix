@@ -24,6 +24,7 @@ rustPlatform.buildRustPackage {
     inherit lockFile;
     outputHashes = {
       "anyrun-interface-25.12.0" = "09gi23v79xj61lndfwms9nd2knmprhxng7jx0bwy8c22yyv0j02i";
+      "anyrun-macros-25.12.0" = "1i0vb1mw9mmq1agi1b1vdmycp3y2grls78k42iym71vdfif1vb4g";
     };
   };
 
