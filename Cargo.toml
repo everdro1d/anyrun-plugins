@@ -1,0 +1,21 @@
+[workspace]
+members = [
+    "plugins/example-plugin",
+    # Add more plugins here
+]
+resolver = "2"
+
+[workspace.dependencies]
+anyrun-plugin = "0.1.0"
+abi_stable = "0.11.1"
+ron = "0.8.0"
+serde = { version = "1.0.228", features = ["derive"] }
+
+[profile.dev. build-override]
+opt-level = 0
+codegen-units = 256
+debug = false
+
+[profile.release.build-override]
+opt-level = 0
+codegen-units = 256
