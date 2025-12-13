@@ -13,7 +13,10 @@ Add the flake:
 
     anyrun-plugins = {
       url = "github:everdro1d/anyrun-plugins";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        flake-utils.follows = "flake-utils";
+        nixpkgs.follows = "nixpkgs";
+      };
     };
 
     ...
@@ -31,7 +34,7 @@ Add to anyrun's home-manager module:
     config = {
       plugins = [
         ...
-        "${inputs.anyrun-plugins.packages.${pkgs.system}.example-plugin"
+        "${inputs.anyrun-plugins.packages.${pkgs.system}.example-plugin}/lib/libexample-plugin.so"
         ...
       ];
       ...
@@ -42,5 +45,5 @@ Add to anyrun's home-manager module:
 
 ## Plugins
 
-- [Example](./plugins/example/README.md)
-  - example part 2
+- [Bookmarks Launcher](./plugins/bookmarks-launcher/README.md)
+  - Read from a bookmark file and launch in default browser.
