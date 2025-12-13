@@ -41,7 +41,7 @@ fn expand_tilde(path: &str) -> String {
 }
 
 fn parse_bookmarks(content: &str) -> Vec<Bookmark> {
-    let mut bookmarks: Vec<Bookmark> = content
+    content
         .lines()
         .filter_map(|line| {
             let line = line.trim();
@@ -49,9 +49,9 @@ fn parse_bookmarks(content: &str) -> Vec<Bookmark> {
                 return None;
             }
 
-            // Parse:  [TAG] <NAME>, <URL>
+            // Parse:   [TAG] <NAME>, <URL>
             let tag_end = line.find(']')?;
-            let tag = line.get(1..tag_end)?.trim().to_string();
+            let tag = line. get(1..tag_end)?.trim().to_string();
 
             let rest = line.get(tag_end + 1..)?.trim();
             let (name, url) = rest.split_once(',')?;
@@ -62,16 +62,12 @@ fn parse_bookmarks(content: &str) -> Vec<Bookmark> {
                 url: url.trim().to_string(),
             })
         })
-        .collect();
-
-    // Sort alphabetically by name
-    bookmarks.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-    bookmarks
+        .collect()
 }
 
 #[init]
 fn init(config_dir: RString) -> State {
-    let config:  Config =
+    let config: Config =
         match fs::read_to_string(format!("{}/bookmarks-launcher.ron", config_dir)) {
             Ok(content) => ron::from_str(&content).unwrap_or_default(),
             Err(_) => Config::default(),
@@ -98,9 +94,9 @@ fn info() -> PluginInfo {
 }
 
 #[get_matches]
-fn get_matches(input:  RString, state: &State) -> RVec<Match> {
+fn get_matches(input: RString, state: &State) -> RVec<Match> {
     // Check for prefix
-    if !input.starts_with(&state. config.prefix) {
+    if !input.starts_with(&state.config.prefix) {
         return RVec::new();
     }
 
@@ -110,18 +106,30 @@ fn get_matches(input:  RString, state: &State) -> RVec<Match> {
         .trim()
         .to_lowercase();
 
-    state
+    let mut matches: Vec<_> = state
         .bookmarks
         .iter()
         .filter(|b| {
             // Show all if search is empty, otherwise filter by name, tag, or url
             search.is_empty()
-                || b.tag.to_lowercase().contains(&search)
+                || b.tag. to_lowercase().contains(&search)
                 || b.name.to_lowercase().contains(&search)
                 || b.url.to_lowercase().contains(&search)
         })
+        .collect();
+
+    // Sort by tag first, then by name within each tag group
+    matches.sort_by(|a, b| {
+        a.tag
+            .to_lowercase()
+            .cmp(&b.tag. to_lowercase())
+            .then_with(|| a.name. to_lowercase().cmp(&b.name.to_lowercase()))
+    });
+
+    matches
+        .into_iter()
         .map(|b| Match {
-            title: b. name.clone().into(),
+            title: b.name.clone().into(),
             description: ROption::RSome(format!("[{}] {}", b.tag, b.url).into()),
             use_pango: false,
             icon: ROption::RNone,
