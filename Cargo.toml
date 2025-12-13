@@ -6,7 +6,7 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-anyrun-plugin = { git = "https://github.com/anyrun-org/anyrun" }
+anyrun-plugin = { git = "https://github.com/anyrun-org/anyrun", tag = "v25.12.0" }
 abi_stable = "0.11.3"
 ron = "0.8.1"
 serde = { version = "1.0.228", features = ["derive"] }
