@@ -1,0 +1,13 @@
+[package]
+name = "bookmarks-launcher"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anyrun-plugin.workspace = true
+abi_stable.workspace = true
+ron.workspace = true
+serde.workspace = true

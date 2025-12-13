@@ -76,6 +76,11 @@
           #   inherit inputs lockFile;
           #   name = "my-plugin";
           # };
+
+          bookmarks-launcher = pkgs.callPackage ./plugin.nix {
+            inherit inputs lockFile;
+            name = "bookmarks-launcher";
+          };
         };
       }
     );

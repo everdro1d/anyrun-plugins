@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "plugins/example-plugin",
+    "plugins/bookmarks-launcher",
     # Add more plugins here
 ]
 resolver = "2"
