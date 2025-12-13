@@ -144,7 +144,7 @@ fn handler(selection: Match) -> HandleResult {
     if let ROption::RSome(desc) = selection.description {
         // Extract URL after "] "
         if let Some(url) = desc.split("] ").nth(1) {
-            if let Err(e) = Command::new("xdg-open").arg(url).spawn() {
+            if let Err(e) = Command::new("xdg-open").arg(url.trim()).spawn() {
                 eprintln! ("[bookmarks-launcher] Failed to open URL: {}", e);
             }
         }
