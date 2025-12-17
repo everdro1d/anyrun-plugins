@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "plugins/bookmarks-launcher",
+    "plugins/tmuxinator-launcher",
     # Add more plugins here
 ]
 resolver = "2"
