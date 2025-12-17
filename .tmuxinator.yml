@@ -1,0 +1,16 @@
+# ./.tmuxinator.yml
+
+name: anyrun-plugins
+root: <%= ENV["PROJECTS"] %>/anyrun-plugins/
+
+pre_window: nix develop
+
+startup_window: editor
+
+windows:
+  - editor:
+      - nvim .
+  - term:
+  - git-lg: lazygit
+  - flake-term:
+      root: <%= ENV["NIX_DOTFILES"] %>
