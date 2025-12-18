@@ -1,8 +1,8 @@
 use std::{fs, process::Command};
 
 use abi_stable::std_types::{ROption, RString, RVec};
-use anyrun_plugin:: *;
-use serde:: Deserialize;
+use anyrun_plugin::*;
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 struct Config {
