@@ -81,6 +81,11 @@
             inherit inputs lockFile;
             name = "bookmarks-launcher";
           };
+
+          tmuxinator-launcher = pkgs.callPackage ./plugins.nix {
+            inherit inputs lockFile;
+            name = "tmuxinator-launcher";
+          };
         };
       }
     );

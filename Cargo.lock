@@ -382,6 +382,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmuxinator-launcher"
+version = "0.1.0"
+dependencies = [
+ "abi_stable",
+ "anyrun-plugin",
+ "ron",
+ "serde",
+]
+
+[[package]]
 name = "tstr"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
