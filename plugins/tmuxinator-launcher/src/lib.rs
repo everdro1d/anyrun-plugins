@@ -4,7 +4,7 @@ use std::{
     fs,
     io::{self, Write},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Command,
 };
 
 use abi_stable::std_types::{ROption, RString, RVec};
@@ -76,7 +76,7 @@ fn info() -> PluginInfo {
 
 #[get_matches]
 fn get_matches(input: RString, state: &State) -> RVec<Match> {
-    // Refresh projects each query to reflect session state.
+    // Refresh discovery each query to keep session state current.
     let projects = discover_projects(&state.config);
 
     if !input.starts_with(&state.config.prefix) {
@@ -103,7 +103,8 @@ fn get_matches(input: RString, state: &State) -> RVec<Match> {
     matches
         .into_iter()
         .map(|p| {
-            // Description encodes locality and the project root path. Handler uses this to decide how to launch.
+            // Description encodes locality and the project root path.
+            // Handler uses this to choose between local (-p) and global start.
             let locality = if p.is_global { "global" } else { "local" };
             let path_text = if p.is_global {
                 p.config
@@ -116,7 +117,9 @@ fn get_matches(input: RString, state: &State) -> RVec<Match> {
 
             Match {
                 title: p.name.clone().into(),
-                description: ROption::RSome(format!("[{}] {} {}", action_label(p.action), locality, path_text).into()),
+                description: ROption::RSome(
+                    format!("[{}] {} {}", action_label(p.action), locality, path_text).into(),
+                ),
                 use_pango: false,
                 icon: ROption::RNone,
                 id: ROption::RNone,
@@ -190,7 +193,7 @@ fn discover_projects(cfg: &Config) -> Vec<Project> {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.extension().and_then(|e| e.to_str()) == Some("yml") {
-                    let name = parse_project_name(&path).unwrap_or_else(|| {
+                    let name = derive_project_name(&path).unwrap_or_else(|| {
                         path.file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or("unknown")
@@ -241,7 +244,12 @@ fn discover_projects(cfg: &Config) -> Vec<Project> {
     projects
 }
 
-fn collect_local_projects(root: &Path, depth: usize, sessions: &HashSet<String>, out: &mut Vec<Project>) {
+fn collect_local_projects(
+    root: &Path,
+    depth: usize,
+    sessions: &HashSet<String>,
+    out: &mut Vec<Project>,
+) {
     if !root.exists() {
         return;
     }
@@ -264,13 +272,19 @@ fn collect_local_projects(root: &Path, depth: usize, sessions: &HashSet<String>,
                 walk(&path, current_depth + 1, max_depth, sessions, out);
             } else if path.file_name().and_then(|s| s.to_str()) == Some(".tmuxinator.yml") {
                 let project_root = path.parent().unwrap_or(base).to_path_buf();
-                let name = parse_project_name(&path).unwrap_or_else(|| {
-                    project_root
-                        .file_name()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("unknown")
-                        .to_string()
-                });
+                let name = derive_project_name(&path)
+                    .or_else(|| {
+                        project_root
+                            .file_name()
+                            .and_then(|s| s.to_str())
+                            .map(|s| s.to_string())
+                    })
+                    .or_else(|| {
+                        path.file_stem()
+                            .and_then(|s| s.to_str())
+                            .map(|s| s.to_string())
+                    })
+                    .unwrap_or_else(|| "unknown".to_string());
                 let action = determine_action(&name, true, sessions);
                 out.push(Project {
                     name,
@@ -284,6 +298,13 @@ fn collect_local_projects(root: &Path, depth: usize, sessions: &HashSet<String>,
     }
 
     walk(root, 0, depth, sessions, out);
+}
+
+// Derive project name from config file.
+// - If `project_name:` is set, use it.
+// - Fallbacks are handled by callers (file stem or parent directory).
+fn derive_project_name(config_path: &Path) -> Option<String> {
+    parse_project_name(config_path)
 }
 
 // Expand ~ and $VARS in paths.
@@ -349,10 +370,7 @@ fn parse_project_name(config_path: &Path) -> Option<String> {
             return Some(rest.trim().trim_matches('"').to_string());
         }
     }
-    config_path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .map(|s| s.to_string())
+    None
 }
 
 fn tmux_sessions() -> HashSet<String> {
@@ -392,56 +410,58 @@ fn action_label(action: ProjectAction) -> &'static str {
 
 // --- Launch helpers --------------------------------------------------------
 
-fn attach(session: &str) -> io::Result<()> {
-    let status = Command::new("tmux")
-        .args(["attach-session", "-t", session])
-        .status()?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("failed to attach to session {session}"),
-        ))
+// Try to spawn a terminal and run the given command inside it.
+// Uses $TERMINAL if set, otherwise tries a handful of common terminals with `-e sh -lc "<cmd>"`.
+fn run_in_terminal(cmd: &str) -> io::Result<()> {
+    let mut candidates: Vec<String> = Vec::new();
+    if let Ok(term) = env::var("TERMINAL") {
+        candidates.push(term);
     }
+    candidates.extend([
+        "x-terminal-emulator",
+        "alacritty",
+        "kitty",
+        "wezterm",
+        "gnome-terminal",
+        "foot",
+        "xterm",
+    ]
+    .into_iter()
+    .map(str::to_string));
+
+    for term in candidates {
+        let spawn = Command::new(&term)
+            .arg("-e")
+            .arg("sh")
+            .arg("-lc")
+            .arg(cmd)
+            .spawn();
+        if spawn.is_ok() {
+            return Ok(());
+        }
+    }
+
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        format!("no terminal available to run: {cmd}"),
+    ))
+}
+
+fn attach(session: &str) -> io::Result<()> {
+    run_in_terminal(&format!("tmux attach-session -t {}", session))
 }
 
 // Local projects: must use `tmuxinator start -p PATH/.tmuxinator.yml`.
 fn start_local(config_path: &Path) -> io::Result<()> {
-    let status = Command::new("tmuxinator")
-        .args(["start", "-p"])
-        .arg(config_path)
-        .stdin(Stdio::null())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("tmuxinator start -p {} failed", config_path.display()),
-        ))
-    }
+    run_in_terminal(&format!(
+        "tmuxinator start -p {}",
+        config_path.display()
+    ))
 }
 
 // Global projects: `tmuxinator start PROJECT_NAME`.
 fn start_global(project: &str) -> io::Result<()> {
-    let status = Command::new("tmuxinator")
-        .arg("start")
-        .arg(project)
-        .stdin(Stdio::null())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("tmuxinator start {project} failed"),
-        ))
-    }
+    run_in_terminal(&format!("tmuxinator start {}", project))
 }
 
 // Write a minimal tmuxinator config file
