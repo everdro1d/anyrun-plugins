@@ -37,10 +37,14 @@ Example configuration:
 
 ```rust
 Config(
+  // Trigger prefix in anyrun
   prefix: ":t",
-  tmuxinator_dir: "~/tmuxinator-projects",
 
-  Directories: [
+  // Optional: custom global tmuxinator projects dir (otherwise defaults are used)
+  // tmuxinator_dir: "~/tmuxinator-projects",
+
+  // Directories to scan (path with ~ or $VARS is expanded; depth 0 = just the dir)
+  directories: [
     (
       path: "$PROJECTS",
       depth: 1,
