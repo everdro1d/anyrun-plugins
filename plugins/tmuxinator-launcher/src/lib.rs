@@ -422,10 +422,7 @@ fn run_in_terminal(cmd: &str, cfg: &Config) -> io::Result<()> {
 
     for term in candidates {
         let spawn = Command::new(&term)
-            .arg("-e")
-            .arg("sh")
-            .arg("-lc")
-            .arg(cmd)
+            .args(["-e", "sh", "-lc", cmd])
             .spawn();
         if spawn.is_ok() {
             return Ok(());
