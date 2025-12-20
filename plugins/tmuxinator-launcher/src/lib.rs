@@ -436,6 +436,20 @@ fn run_in_terminal(cmd: &str, cfg: &Config) -> io::Result<()> {
 }
 
 fn attach(session: &str, cfg: &Config) -> io::Result<()> {
+    // Check if tmux is active
+    let running = Command::new("tmux")
+        .arg("info").status()?;
+    if running.success() {
+        // Switch the current client to the target session.
+        let status = Command::new("tmux")
+            .args(["switch-client", "-t", session])
+            .status()?;
+        if status.success() {
+            return Ok(());
+        }
+    }
+
+    // Fall back to a normal attach if switch fails
     run_in_terminal(&format!("tmux attach-session -t {}", session), &cfg)
 }
 
