@@ -363,7 +363,7 @@ fn parse_project_name(config_path: &Path) -> Option<String> {
     for line in content.lines() {
         let trimmed = line.trim();
         if let Some(rest) = trimmed.strip_prefix("project_name:") {
-            return Some(rest.trim().trim_matches('"').to_string());
+            return Some(rest.trim().trim_matches(['"','.']).to_string().replace(".", "-"));
         }
     }
     None
