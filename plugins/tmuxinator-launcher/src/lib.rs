@@ -464,7 +464,7 @@ fn try_switch_client(session: &str) -> bool {
 
 fn attach(session: &str, cfg: &Config) -> io::Result<()> {
     if !try_switch_client(session) {
-        run_in_terminal(&format!("tmux attach-session -t {}", session), &cfg)?
+        run_in_terminal(&format!("tmux attach-session -t {}", session), cfg)?
     }
 
     Ok(())
@@ -472,23 +472,46 @@ fn attach(session: &str, cfg: &Config) -> io::Result<()> {
 
 // Local projects: must use `tmuxinator start -p PATH/.tmuxinator.yml`.
 fn start_local(project: &str, config_path: &Path, cfg: &Config) -> io::Result<()> {
-    if !try_switch_client(project) {
-        run_in_terminal(&format!(
-            "tmuxinator start -p {}",
-            config_path.display()
-        ), &cfg)?
+    if let Ok(running) = Command::new("tmux").arg("info").status() {
+        if running.success() {
+            if let Ok(start) = Command::new("tmuxinator")
+                .args(["start", "-p", &config_path.display().to_string(), "--no-attach"])
+                .status()
+            && start.success() {
+                // Switch the current client to the target session.
+                if let Ok(switch) = Command::new("tmux")
+                    .args(["switch-client", "-t", project])
+                    .status()
+                && switch.success() {
+                    return Ok(())
+                }
+            }
+        }
     }
 
-    Ok(())
+    run_in_terminal(&format!("tmuxinator start -p {}", config_path.display()), cfg)
 }
 
 // Global projects: `tmuxinator start PROJECT_NAME`.
 fn start_global(project: &str, cfg: &Config) -> io::Result<()> {
-    if !try_switch_client(project) {
-        run_in_terminal(&format!("tmuxinator start {}", project), &cfg)?
+    if let Ok(running) = Command::new("tmux").arg("info").status() {
+        if running.success() {
+            if let Ok(start) = Command::new("tmuxinator")
+                .args(["start", project, "--no-attach"])
+                .status()
+            && start.success() {
+                // Switch the current client to the target session.
+                if let Ok(switch) = Command::new("tmux")
+                    .args(["switch-client", "-t", project])
+                    .status()
+                && switch.success() {
+                    return Ok(())
+                }
+            }
+        }
     }
 
-    Ok(())
+    run_in_terminal(&format!("tmuxinator start {}", project), cfg)
 }
 
 fn create_basic_config(path: &Path, root: &Path, name: &str) -> io::Result<()> {
