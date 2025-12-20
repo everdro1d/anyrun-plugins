@@ -194,7 +194,7 @@ fn discover_projects(cfg: &Config) -> Vec<Project> {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.extension().and_then(|e| e.to_str()) == Some("yml") {
-                    let name = derive_project_name(&path).unwrap_or_else(|| {
+                    let name = parse_project_name(&path).unwrap_or_else(|| {
                         path.file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or("unknown")
@@ -298,13 +298,6 @@ fn collect_local_projects(
     }
 
     walk(root, 0, depth, sessions, out);
-}
-
-// Derive project name from config file.
-// - If `project_name:` is set, use it.
-// - Fallbacks are handled by callers (file stem or parent directory).
-fn derive_project_name(config_path: &Path) -> Option<String> {
-    parse_project_name(config_path)
 }
 
 // Expand ~ and $VARS in paths.
