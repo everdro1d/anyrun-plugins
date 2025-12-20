@@ -1,6 +1,6 @@
 # Anyrun plugins
 
-This repo is structured based on [wuliuqii's anyrun-plugins](https://github.com/wuliuqii/anyrun-plugins/).
+This repo is structured based on [wuliuqii's anyrun-plugins](https://github.com/wuliuqii/anyrun-plugins/). It is a collection of anyrun plugins I've made for myself to make life easier.
 
 ## Installation
 
