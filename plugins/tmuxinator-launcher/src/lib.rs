@@ -470,6 +470,7 @@ fn start_global(project: &str, cfg: &Config) -> io::Result<()> {
 }
 
 fn create_basic_config(path: &Path, root: &Path, name: &str) -> io::Result<()> {
+    let name = &name.replace(".", "-");
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
