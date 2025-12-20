@@ -47,3 +47,6 @@ Add to anyrun's home-manager module:
 
 - [Bookmarks Launcher](./plugins/bookmarks-launcher/README.md)
   - Read from a bookmark file and launch in default browser.
+ 
+- [Tmuxinator Launcher](./plugins/tmuxinator-launcher/README.md)
+  - Discover, create, and launch tmuxinator projects quickly via anyrun.
