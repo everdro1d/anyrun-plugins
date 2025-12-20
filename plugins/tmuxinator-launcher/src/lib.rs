@@ -189,7 +189,6 @@ fn discover_projects(cfg: &Config) -> Vec<Project> {
     let sessions = tmux_sessions();
     let mut projects = Vec::new();
 
-    // Global tmuxinator dir projects (*.yml)
     for dir in tmuxinator_dirs(cfg) {
         if let Ok(entries) = fs::read_dir(&dir) {
             for entry in entries.flatten() {
@@ -214,7 +213,6 @@ fn discover_projects(cfg: &Config) -> Vec<Project> {
         }
     }
 
-    // Local projects: search for .tmuxinator.yml in configured roots (depth-limited)
     for dir in &cfg.directories {
         let root = expand_path(&dir.path);
         collect_local_projects(&root, dir.depth, &sessions, &mut projects);
@@ -412,8 +410,6 @@ fn action_label(action: ProjectAction) -> &'static str {
 
 // --- Launch helpers --------------------------------------------------------
 
-// Try to spawn a terminal and run the given command inside it.
-// Uses terminal config if set, otherwise tries a handful of common terminals with `-e sh -lc "<cmd>"`.
 fn run_in_terminal(cmd: &str, cfg: &Config) -> io::Result<()> {
     let mut candidates: Vec<String> = Vec::new();
     if let Some(term) = &cfg.terminal {
@@ -466,7 +462,6 @@ fn start_global(project: &str, cfg: &Config) -> io::Result<()> {
     run_in_terminal(&format!("tmuxinator start {}", project), &cfg)
 }
 
-// Write a minimal tmuxinator config file
 fn create_basic_config(path: &Path, root: &Path, name: &str) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
