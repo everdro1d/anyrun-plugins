@@ -216,27 +216,6 @@ fn discover_projects(cfg: &Config) -> Vec<Project> {
     for dir in &cfg.directories {
         let root = expand_path(&dir.path);
         collect_local_projects(&root, dir.depth, &sessions, &mut projects);
-        // If depth == 0 and no config, mark creatable
-        if dir.depth == 0 {
-            let config_path = root.join(".tmuxinator.yml");
-            if !config_path.exists() {
-                let name = root
-                    .file_name()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("unnamed")
-                    .to_string();
-                let action = determine_action(&name, false, &sessions);
-                if action == ProjectAction::Create {
-                    projects.push(Project {
-                        name,
-                        root: root.clone(),
-                        config: Some(config_path),
-                        action,
-                        is_global: false,
-                    });
-                }
-            }
-        }
     }
 
     projects.sort_by(|a, b| a.name.cmp(&b.name));
@@ -254,45 +233,69 @@ fn collect_local_projects(
         return;
     }
 
-    fn walk(
-        base: &Path,
-        current_depth: usize,
-        max_depth: usize,
-        sessions: &HashSet<String>,
-        out: &mut Vec<Project>,
-    ) {
-        if current_depth > max_depth {
-            return;
-        }
-
-        let Ok(entries) = fs::read_dir(base) else { return };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                walk(&path, current_depth + 1, max_depth, sessions, out);
-            } else if path.file_name().and_then(|s| s.to_str()) == Some(".tmuxinator.yml") {
-                let project_root = path.parent().unwrap_or(base).to_path_buf();
-                let name = derive_project_name(&path)
-                    .or_else(|| {
-                        project_root
-                            .file_name()
-                            .and_then(|s| s.to_str())
-                            .map(|s| s.to_string())
-                    })
-                    .or_else(|| {
-                        path.file_stem()
-                            .and_then(|s| s.to_str())
-                            .map(|s| s.to_string())
-                    })
-                    .unwrap_or_else(|| "unknown".to_string());
-                let action = determine_action(&name, true, sessions);
+    fn process_dir(dir: &Path, sessions: &HashSet<String>, out: &mut Vec<Project>) {
+        let config_path = dir.join(".tmuxinator.yml");
+        if config_path.exists() {
+            let name = parse_project_name(&config_path)
+                .or_else(|| {
+                    dir.file_name()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.to_string())
+                })
+                .or_else(|| {
+                    config_path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "unknown".to_string());
+            let action = determine_action(&name, true, sessions);
+            out.push(Project {
+                name,
+                root: dir.to_path_buf(),
+                config: Some(config_path),
+                action,
+                is_global: false,
+            });
+        } else {
+            let name = dir
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unnamed")
+                .to_string();
+            let action = determine_action(&name, false, sessions);
+            if action == ProjectAction::Create {
                 out.push(Project {
                     name,
-                    root: project_root,
-                    config: Some(path.clone()),
+                    root: dir.to_path_buf(),
+                    config: Some(config_path),
                     action,
                     is_global: false,
                 });
+            }
+        }
+    }
+
+    fn walk(
+        dir: &Path,
+        current_depth: usize,
+        depth: usize,
+        sessions: &HashSet<String>,
+        out: &mut Vec<Project>,
+    ) {
+        if current_depth == depth {
+            process_dir(dir, sessions, out);
+            return;
+        }
+        if current_depth > depth {
+            return;
+        }
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    walk(&path, current_depth + 1, depth, sessions, out);
+                }
             }
         }
     }
