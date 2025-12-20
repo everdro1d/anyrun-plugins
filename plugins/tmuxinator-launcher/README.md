@@ -1,14 +1,14 @@
 # tmuxinator anyrun launcher plugin
 
-An [**anyrun**](https://github.com/anyrun-org/anyrun) plugin for discovering, creating, and launching **tmuxinator projects** with project detection and session actions.
+An [**anyrun**](https://github.com/anyrun-org/anyrun) plugin for discovering, creating, and launching [tmuxinator](https://github.com/tmuxinator/tmuxinator) projects.
 
 ## Features
 
-- **Project scanning**
+- **Local tmuxinator project discovery**
   - Scan directories with configurable depth
   - Supports multiple root directories
 
-- **tmuxinator project discovery**
+- **Global tmuxinator project discovery**
   - Optional custom global tmuxinator projects directory
   - Falls back to tmuxinator’s default locations if not specified
   - Uses filename as project name when applicable
@@ -19,7 +19,8 @@ An [**anyrun**](https://github.com/anyrun-org/anyrun) plugin for discovering, cr
 
 - **Project identification**
   - Searches for `.tmuxinator.yml` in a project root (definded with depth config)
-  - Reads `project_name:` from config when in a local config
+  - Reads the project's `name:` key when in a local config
+  - Uses the filename stem for global configs
 
 - **Automatic project creation**
   - Creates and runs a basic tmuxinator config file if one does not exist
@@ -65,10 +66,14 @@ Config(
 - `prefix`
   Command prefix used to trigger the launcher in anyrun.
 
+- `terminal` *(optional)*
+  Custom default terminal to try to launch in.
+  If unset, default list of terminals are tried until the first match.
+
 - `tmuxinator_dir` *(optional)*
   Custom global directory for tmuxinator projects.
   If unset, default tmuxinator locations are used.
 
-- `Directories`
+- `directories`
   - `path`: Directory to scan
   - `depth`: Recursion depth (`0` = the directory itself, `1` = the directory's children)
