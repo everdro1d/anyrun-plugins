@@ -20,6 +20,7 @@ struct Directory {
 #[derive(Deserialize, Clone)]
 struct Config {
     prefix: String,
+    terminal: Option<String>,
     tmuxinator_dir: Option<String>,
     #[serde(default)]
     directories: Vec<Directory>,
@@ -29,6 +30,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             prefix: ":t".to_string(),
+            terminal: None,
             tmuxinator_dir: None,
             directories: Vec::new(),
         }
@@ -130,7 +132,7 @@ fn get_matches(input: RString, state: &State) -> RVec<Match> {
 }
 
 #[handler]
-fn handler(selection: Match) -> HandleResult {
+fn handler(selection: Match, state: &State) -> HandleResult {
     let title = selection.title.as_str();
 
     if let ROption::RSome(desc) = selection.description.clone() {
@@ -149,13 +151,13 @@ fn handler(selection: Match) -> HandleResult {
                 let root = local_rest.trim();
                 let config_path = PathBuf::from(root).join(".tmuxinator.yml");
                 let res = match action {
-                    ProjectAction::Attach => attach(title),
-                    ProjectAction::Start => start_local(&config_path),
+                    ProjectAction::Attach => attach(title, &state.config),
+                    ProjectAction::Start => start_local(&config_path, &state.config),
                     ProjectAction::Create => {
                         if let Err(e) = create_basic_config(&config_path, &PathBuf::from(root), title) {
                             Err(e)
                         } else {
-                            start_local(&config_path)
+                            start_local(&config_path, &state.config)
                         }
                     }
                 };
@@ -165,8 +167,8 @@ fn handler(selection: Match) -> HandleResult {
             } else if let Some(global_path) = rest.strip_prefix("global ") {
                 // Global configs are started by project name.
                 let res = match action {
-                    ProjectAction::Attach => attach(title),
-                    _ => start_global(title),
+                    ProjectAction::Attach => attach(title, &state.config),
+                    _ => start_global(title, &state.config),
                 };
                 if let Err(e) = res {
                     eprintln!(
@@ -411,11 +413,11 @@ fn action_label(action: ProjectAction) -> &'static str {
 // --- Launch helpers --------------------------------------------------------
 
 // Try to spawn a terminal and run the given command inside it.
-// Uses $TERMINAL if set, otherwise tries a handful of common terminals with `-e sh -lc "<cmd>"`.
-fn run_in_terminal(cmd: &str) -> io::Result<()> {
+// Uses terminal config if set, otherwise tries a handful of common terminals with `-e sh -lc "<cmd>"`.
+fn run_in_terminal(cmd: &str, cfg: &Config) -> io::Result<()> {
     let mut candidates: Vec<String> = Vec::new();
-    if let Ok(term) = env::var("TERMINAL") {
-        candidates.push(term);
+    if let Some(term) = &cfg.terminal {
+        candidates.push(term.clone());
     }
     candidates.extend([
         "x-terminal-emulator",
@@ -447,21 +449,21 @@ fn run_in_terminal(cmd: &str) -> io::Result<()> {
     ))
 }
 
-fn attach(session: &str) -> io::Result<()> {
-    run_in_terminal(&format!("tmux attach-session -t {}", session))
+fn attach(session: &str, cfg: &Config) -> io::Result<()> {
+    run_in_terminal(&format!("tmux attach-session -t {}", session), &cfg)
 }
 
 // Local projects: must use `tmuxinator start -p PATH/.tmuxinator.yml`.
-fn start_local(config_path: &Path) -> io::Result<()> {
+fn start_local(config_path: &Path, cfg: &Config) -> io::Result<()> {
     run_in_terminal(&format!(
         "tmuxinator start -p {}",
         config_path.display()
-    ))
+    ), &cfg)
 }
 
 // Global projects: `tmuxinator start PROJECT_NAME`.
-fn start_global(project: &str) -> io::Result<()> {
-    run_in_terminal(&format!("tmuxinator start {}", project))
+fn start_global(project: &str, cfg: &Config) -> io::Result<()> {
+    run_in_terminal(&format!("tmuxinator start {}", project), &cfg)
 }
 
 // Write a minimal tmuxinator config file

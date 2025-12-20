@@ -40,6 +40,9 @@ Config(
   // Trigger prefix in anyrun
   prefix: ":t",
 
+  // Optional: set the terminal to run in (otherwise defaults are used and the first match opens)
+  terminal: "kitty",
+
   // Optional: custom global tmuxinator projects dir (otherwise defaults are used)
   // tmuxinator_dir: "~/tmuxinator-projects",
 
