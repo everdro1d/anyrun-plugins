@@ -94,9 +94,14 @@ fn get_matches(input: RString, state: &State) -> RVec<Match> {
     let mut matches: Vec<_> = projects
         .iter()
         .filter(|p| {
+            let locality = if p.is_global { "global" } else { "local" };
+            let action = action_label(p.action);
+
             search.is_empty()
                 || p.name.to_lowercase().contains(&search)
                 || p.root.to_string_lossy().to_lowercase().contains(&search)
+                || locality.contains(&search)
+                || action.contains(&search)
         })
         .collect();
 
