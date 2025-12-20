@@ -194,12 +194,13 @@ fn discover_projects(cfg: &Config) -> Vec<Project> {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.extension().and_then(|e| e.to_str()) == Some("yml") {
-                    let name = parse_project_name(&path).unwrap_or_else(|| {
+                    let raw_name = parse_project_name(&path).unwrap_or_else(|| {
                         path.file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or("unknown")
                             .to_string()
                     });
+                    let name = clean_project_name(&raw_name);
                     let action = determine_action(&name, true, &sessions);
                     projects.push(Project {
                         name,
@@ -236,7 +237,7 @@ fn collect_local_projects(
     fn process_dir(dir: &Path, sessions: &HashSet<String>, out: &mut Vec<Project>) {
         let config_path = dir.join(".tmuxinator.yml");
         if config_path.exists() {
-            let name = parse_project_name(&config_path)
+            let raw_name = parse_project_name(&config_path)
                 .or_else(|| {
                     dir.file_name()
                         .and_then(|s| s.to_str())
@@ -249,6 +250,7 @@ fn collect_local_projects(
                         .map(|s| s.to_string())
                 })
                 .unwrap_or_else(|| "unknown".to_string());
+            let name = clean_project_name(&raw_name);
             let action = determine_action(&name, true, sessions);
             out.push(Project {
                 name,
@@ -258,11 +260,12 @@ fn collect_local_projects(
                 is_global: false,
             });
         } else {
-            let name = dir
+            let raw_name = dir
                 .file_name()
                 .and_then(|s| s.to_str())
                 .unwrap_or("unnamed")
                 .to_string();
+            let name = clean_project_name(&raw_name);
             let action = determine_action(&name, false, sessions);
             if action == ProjectAction::Create {
                 out.push(Project {
@@ -362,11 +365,15 @@ fn parse_project_name(config_path: &Path) -> Option<String> {
     let content = fs::read_to_string(config_path).ok()?;
     for line in content.lines() {
         let trimmed = line.trim();
-        if let Some(rest) = trimmed.strip_prefix("project_name:") {
-            return Some(rest.trim().trim_matches(['"','.']).to_string().replace(".", "-"));
+        if let Some(rest) = trimmed.strip_prefix("name:") {
+            return Some(clean_project_name(rest));
         }
     }
     None
+}
+
+fn clean_project_name(name: &str) -> String {
+    name.trim().trim_matches(['"','\'','.']).to_string().replace(".", "-")
 }
 
 fn tmux_sessions() -> HashSet<String> {
@@ -485,7 +492,6 @@ fn start_global(project: &str, cfg: &Config) -> io::Result<()> {
 }
 
 fn create_basic_config(path: &Path, root: &Path, name: &str) -> io::Result<()> {
-    let name = &name.replace(".", "-");
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
