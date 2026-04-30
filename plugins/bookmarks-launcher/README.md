@@ -1,16 +1,18 @@
 # A bookmark launcher via anyrun
 
-define bookmarks in a file like so:
+Define bookmarks in a file like so:
 ```
-# somewhere/bookmarks.txt
+# .../somewhere/<bookmarks file>
 
 # format
-[tag] <NAME>, <URL>
+<URL> [tag] <NAME>
 
 # ex:
-[personal] YouTube, https://www.youtube.com/
-[work] Rust Crates, https://crates.io/
+https://www.youtube.com/ [personal] YouTube
+https://crates.io/ [work] Rust Crates
 ```
+
+If a bookmark entry is missing a tag, it will set the tag to unknown.
 
 Default Configuration:
 ```

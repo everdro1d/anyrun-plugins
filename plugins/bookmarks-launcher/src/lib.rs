@@ -21,9 +21,9 @@ impl Default for Config {
 
 #[derive(Clone)]
 struct Bookmark {
+    url: String,
     tag: String,
     name: String,
-    url: String,
 }
 
 struct State {
@@ -49,17 +49,28 @@ fn parse_bookmarks(content: &str) -> Vec<Bookmark> {
                 return None;
             }
 
-            // Parse:   [TAG] <NAME>, <URL>
-            let tag_end = line.find(']')?;
-            let tag = line. get(1..tag_end)?.trim().to_string();
+            let (url, tag, name) = if let (Some(b), Some(e)) = (line.find('['), line.find(']')) {
+                // Standard Parse: <URL> [TAG] <NAME>
+                let url = line.get(..b)?.trim().to_string();
+                let tag_content = line.get(b + 1..e)?.trim();
+                let tag = if tag_content.is_empty() { "unknown".to_string() } else { tag_content.to_string() };
+                let name = line.get(e + 1..)? .trim().to_string();
 
-            let rest = line.get(tag_end + 1..)?.trim();
-            let (name, url) = rest.split_once(',')?;
+                (url, tag, name)
+            } else {
+                // Fallback Parse: <URL> <NAME>
+                let first_space = line.find(' ')?;
+                let url = line.get(..first_space)?.trim().to_string();
+                let tag = "unknown".to_string();
+                let name = line.get(first_space + 1..)?.trim().to_string();
+
+                (url, tag, name)
+            };
 
             Some(Bookmark {
+                url,
                 tag,
-                name: name.trim().to_string(),
-                url: url.trim().to_string(),
+                name,
             })
         })
         .collect()
