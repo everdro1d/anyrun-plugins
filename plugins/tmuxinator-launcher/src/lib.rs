@@ -91,7 +91,7 @@ fn get_matches(input: RString, state: &State) -> RVec<Match> {
         .trim()
         .to_lowercase();
 
-    let mut matches: Vec<_> = projects
+    let mut filtered: Vec<_> = projects
         .iter()
         .filter(|p| {
             let locality = if p.is_global { "global" } else { "local" };
@@ -105,9 +105,9 @@ fn get_matches(input: RString, state: &State) -> RVec<Match> {
         })
         .collect();
 
-    matches.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    filtered.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
-    matches
+    let mut matches: Vec<Match> = filtered
         .into_iter()
         .map(|p| {
             // Description encodes locality and the project root path.
@@ -132,8 +132,34 @@ fn get_matches(input: RString, state: &State) -> RVec<Match> {
                 id: ROption::RNone,
             }
         })
-        .collect::<Vec<_>>()
-        .into()
+        .collect();
+
+    // When the search term is non-empty and no existing project shares the
+    // sanitized name, offer a "Create: <name>" entry that will create a new
+    // project directory and run the standard create flow.
+    if !search.is_empty() {
+        let sanitized = sanitize_new_project_name(&search);
+        if !sanitized.is_empty() {
+            let name_exists = projects
+                .iter()
+                .any(|p| p.name.to_lowercase() == sanitized.to_lowercase());
+            if !name_exists {
+                let base_dir = new_project_base_dir(&state.config);
+                let new_dir = base_dir.join(&sanitized);
+                matches.push(Match {
+                    title: format!("Create: {}", sanitized).into(),
+                    description: ROption::RSome(
+                        format!("[new-project] local {}", new_dir.display()).into(),
+                    ),
+                    use_pango: false,
+                    icon: ROption::RNone,
+                    id: ROption::RNone,
+                });
+            }
+        }
+    }
+
+    matches.into()
 }
 
 #[handler]
@@ -142,6 +168,45 @@ fn handler(selection: Match, state: &State) -> HandleResult {
 
     if let ROption::RSome(desc) = selection.description.clone() {
         let desc = desc.as_str();
+
+        // Handle "Create: <name>" entries – create the directory first, then
+        // run the standard create flow (write .tmuxinator.yml and start).
+        if desc.contains("[new-project]") {
+            if let Some(rest) = desc.split("] ").nth(1) {
+                if let Some(local_rest) = rest.strip_prefix("local ") {
+                    let new_root = PathBuf::from(local_rest.trim());
+                    // Derive the project name from the last path component so we
+                    // always have the sanitized name regardless of the title text.
+                    let project_name_owned = new_root
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| {
+                            title.strip_prefix("Create: ").unwrap_or(title).to_string()
+                        });
+                    let project_name = project_name_owned.as_str();
+                    let config_path = new_root.join(".tmuxinator.yml");
+
+                    if let Err(e) = fs::create_dir_all(&new_root) {
+                        eprintln!(
+                            "[tmuxinator-launcher] failed to create directory {}: {e}",
+                            new_root.display()
+                        );
+                        return HandleResult::Close;
+                    }
+
+                    let res = create_basic_config(&config_path, &new_root, project_name)
+                        .and_then(|_| start_local(project_name, &config_path, &state.config));
+                    if let Err(e) = res {
+                        eprintln!(
+                            "[tmuxinator-launcher] failed to create/start new project {project_name}: {e}"
+                        );
+                    }
+                }
+            }
+            return HandleResult::Close;
+        }
+
         // Expected format: "[action] local <path>" or "[action] global <path>"
         let action = if desc.contains("[attach]") {
             ProjectAction::Attach
@@ -366,6 +431,17 @@ fn tmuxinator_dirs(cfg: &Config) -> Vec<PathBuf> {
     }
 }
 
+/// Returns the base directory under which new projects should be created.
+/// Prefers the first path in `Config.directories`; falls back to `$HOME`,
+/// and finally to the current working directory if `$HOME` is not set.
+fn new_project_base_dir(cfg: &Config) -> PathBuf {
+    cfg.directories
+        .first()
+        .map(|d| expand_path(&d.path))
+        .or_else(|| env::var("HOME").ok().map(PathBuf::from))
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
 fn parse_project_name(config_path: &Path) -> Option<String> {
     let content = fs::read_to_string(config_path).ok()?;
     for line in content.lines() {
@@ -379,6 +455,26 @@ fn parse_project_name(config_path: &Path) -> Option<String> {
 
 fn clean_project_name(name: &str) -> String {
     name.trim().trim_matches(['"','\'','.']).to_string().replace(".", "-")
+}
+
+/// Sanitize a raw search term into a safe directory / tmux session name.
+///
+/// Rules applied (in order):
+/// 1. Trim leading/trailing whitespace.
+/// 2. Replace spaces with `-`.
+/// 3. Remove characters that are unsafe in file paths or tmux session names
+///    (`/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, NUL).
+/// 4. Replace dots with `-` (consistent with `clean_project_name`), then
+///    strip any remaining leading/trailing `-` characters.
+fn sanitize_new_project_name(name: &str) -> String {
+    let with_dashes = name.trim().replace(' ', "-");
+    let filtered: String = with_dashes
+        .chars()
+        .filter(|&c| !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0'))
+        .collect();
+    // Replace dots before trimming so all dots (including internal ones) become
+    // dashes, then strip any leading/trailing dashes that result.
+    filtered.replace('.', "-").trim_matches('-').to_string()
 }
 
 fn tmux_sessions() -> HashSet<String> {
