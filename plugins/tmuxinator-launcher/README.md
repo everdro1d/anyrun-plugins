@@ -26,6 +26,13 @@ An [**anyrun**](https://github.com/anyrun-org/anyrun) plugin for discovering, cr
   - Creates and runs a basic tmuxinator config file if one does not exist
   - Projects that need to be created are marked distinctly in the UI
 
+- **Create new project from search**
+  - When a search term doesn't match any existing project, a `Create: <name>` entry appears
+  - Selecting it creates the project directory inside the first configured `directories` path
+    (falls back to `$HOME` when no directories are configured), writes a basic `.tmuxinator.yml`,
+    and starts the session immediately
+  - The name is sanitized: spaces become `-`, unsafe path characters are removed, dots become `-`
+
 - **Project action indicators**
   - Projects are tagged in the entry description field with:
     - `[attach]` – session exists, can attach
