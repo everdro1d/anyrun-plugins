@@ -21,4 +21,7 @@ Config(
   prefix: ":b",
   // Filepath to look for a bookmarks file
   bookmarks_file: "~/bookmarks.txt",
+  // Maximum number of results shown in anyrun
+  max_entries: 10,
 )
+```

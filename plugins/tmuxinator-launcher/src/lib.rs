@@ -22,6 +22,8 @@ struct Config {
     prefix: String,
     terminal: Option<String>,
     tmuxinator_dir: Option<String>,
+    #[serde(default = "default_max_entries")]
+    max_entries: usize,
     #[serde(default)]
     directories: Vec<Directory>,
 }
@@ -32,9 +34,14 @@ impl Default for Config {
             prefix: ":t".to_string(),
             terminal: None,
             tmuxinator_dir: None,
+            max_entries: default_max_entries(),
             directories: Vec::new(),
         }
     }
+}
+
+const fn default_max_entries() -> usize {
+    10
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -159,6 +166,7 @@ fn get_matches(input: RString, state: &State) -> RVec<Match> {
         }
     }
 
+    matches.truncate(state.config.max_entries);
     matches.into()
 }
 

@@ -8,6 +8,8 @@ use serde::Deserialize;
 struct Config {
     prefix: String,
     bookmarks_file: String,
+    #[serde(default = "default_max_entries")]
+    max_entries: usize,
 }
 
 impl Default for Config {
@@ -15,8 +17,13 @@ impl Default for Config {
         Config {
             prefix: ":b".to_string(),
             bookmarks_file: "~/bookmarks.txt".to_string(),
+            max_entries: default_max_entries(),
         }
     }
+}
+
+const fn default_max_entries() -> usize {
+    10
 }
 
 #[derive(Clone)]
@@ -139,6 +146,7 @@ fn get_matches(input: RString, state: &State) -> RVec<Match> {
 
     matches
         .into_iter()
+        .take(state.config.max_entries)
         .map(|b| Match {
             title: b.name.clone().into(),
             description: ROption::RSome(format!("[{}] {}", b.tag, b.url).into()),
