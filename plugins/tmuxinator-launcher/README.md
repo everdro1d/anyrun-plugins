@@ -54,6 +54,9 @@ Config(
   // Optional: custom global tmuxinator projects dir (otherwise defaults are used)
   // tmuxinator_dir: "~/tmuxinator-projects",
 
+  // Maximum number of results shown in anyrun
+  max_entries: 10,
+
   // Directories to scan (path with ~ or $VARS is expanded; depth 0 = just the dir)
   directories: [
     (
@@ -80,6 +83,9 @@ Config(
 - `tmuxinator_dir` *(optional)*
   Custom global directory for tmuxinator projects.
   If unset, default tmuxinator locations are used.
+
+- `max_entries`
+  Maximum number of entries shown in anyrun results.
 
 - `directories`
   - `path`: Directory to scan
